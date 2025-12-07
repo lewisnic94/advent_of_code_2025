@@ -12,15 +12,9 @@ func main() {
 	incomingBeams := map[int]int{strings.Index(rows[0], "S"): 1}
 	splitCount, totalTimelines := 0, 0
 	for _, row := range rows {
-		splitterLocations := map[int]bool{}
-		for c, ch := range []rune(row) {
-			if ch == '^' {
-				splitterLocations[c] = true
-			}
-		}
 		outgoingBeams := map[int]int{}
 		for idx, count := range incomingBeams {
-			if splitterLocations[idx] {
+			if []rune(row)[idx] == '^' {
 				outgoingBeams[idx-1] += count
 				outgoingBeams[idx+1] += count
 				splitCount++
