@@ -11,7 +11,7 @@ func main() {
 	rows := strings.Split(string(dat), "\n")
 	incomingBeams := map[int]int{strings.Index(rows[0], "S"): 1}
 	splitCount, totalTimelines := 0, 0
-	for _, row := range rows {
+	for _, row := range rows[1:] {
 		outgoingBeams := map[int]int{}
 		for idx, count := range incomingBeams {
 			if []rune(row)[idx] == '^' {
