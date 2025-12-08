@@ -17,17 +17,8 @@ type jb struct {
 
 type pair struct{ a, b jb }
 
-type pairWithDistance struct {
-	pair
-	distance float64
-}
-
-type circuit struct {
-	junctionBoxes map[jb]bool
-}
-
-func distance(a, b jb) float64 {
-	return math.Sqrt((math.Pow(float64(a.c.x-b.c.x), 2)) + (math.Pow(float64(a.c.y-b.c.y), 2)) + (math.Pow(float64(a.c.z-b.c.z), 2)))
+func (p pair) Distance() float64 {
+	return math.Sqrt((math.Pow(float64(p.a.c.x-p.b.c.x), 2)) + (math.Pow(float64(p.a.c.y-p.b.c.y), 2)) + (math.Pow(float64(p.a.c.z-p.b.c.z), 2)))
 }
 
 func main() {
@@ -40,52 +31,50 @@ func main() {
 		junctionBoxes = append(junctionBoxes, jb)
 	}
 
-	pairs := map[pair]float64{}
+	pairMap := map[pair]bool{}
 	for i, jb := range junctionBoxes {
 		for j, otherJb := range junctionBoxes {
 			if i == j {
 				continue
 			}
-			if _, ok := pairs[pair{a: otherJb, b: jb}]; ok {
+			if _, ok := pairMap[pair{a: otherJb, b: jb}]; ok {
 				continue
 			}
-			pairs[pair{a: jb, b: otherJb}] = distance(jb, otherJb)
+			pairMap[pair{a: jb, b: otherJb}] = true
 		}
 	}
-
-	pairsWithDistances := []pairWithDistance{}
-	for p, d := range pairs {
-		pairsWithDistances = append(pairsWithDistances, pairWithDistance{pair: p, distance: d})
+	pairs := []pair{}
+	for p := range pairMap {
+		pairs = append(pairs, p)
 	}
 	// sort by distance
-	sort.Slice(pairsWithDistances, func(i, j int) bool {
-		return pairsWithDistances[i].distance < pairsWithDistances[j].distance
+	sort.Slice(pairs, func(i, j int) bool {
+		return pairs[i].Distance() < pairs[j].Distance()
 	})
-	part1Circuits := []circuit{}
+	part1Circuits := []map[jb]bool{}
 	N := 1000
-	for _, pwd := range pairsWithDistances[:N] {
-		newCircuit := circuit{junctionBoxes: map[jb]bool{pwd.a: true, pwd.b: true}}
-		part1Circuits = append(part1Circuits, newCircuit)
+	for _, pwd := range pairs[:N] {
+		part1Circuits = append(part1Circuits, map[jb]bool{pwd.a: true, pwd.b: true})
 	}
 	combinedCircuits := combineCircuits(part1Circuits)
-	c1len := len(combinedCircuits[0].junctionBoxes)
-	c2len := len(combinedCircuits[1].junctionBoxes)
-	c3len := len(combinedCircuits[2].junctionBoxes)
+	c1len := len(combinedCircuits[0])
+	c2len := len(combinedCircuits[1])
+	c3len := len(combinedCircuits[2])
 
-	a, b := combineCircuits2(pairsWithDistances, len(junctionBoxes))
+	a, b := combineCircuits2(pairs, len(junctionBoxes))
 	fmt.Println("part 1:", c1len*c2len*c3len)
 	fmt.Println("part 2:", a, b, a.c.x*b.c.x)
 
 }
 
-func combineCircuits(circuits []circuit) []circuit {
-	newCircuits := []circuit{circuits[0]}
+func combineCircuits(circuits []map[jb]bool) []map[jb]bool {
+	newCircuits := []map[jb]bool{circuits[0]}
 	for _, circuit := range circuits[1:] {
 		overlap := false
 		foundCircuit := 0
 		for j, newCircuit := range newCircuits {
-			for jb := range circuit.junctionBoxes {
-				if _, ok := newCircuit.junctionBoxes[jb]; ok {
+			for jb := range circuit {
+				if _, ok := newCircuit[jb]; ok {
 					overlap = true
 					foundCircuit = j
 					break
@@ -94,8 +83,8 @@ func combineCircuits(circuits []circuit) []circuit {
 
 		}
 		if overlap {
-			for jb := range circuit.junctionBoxes {
-				newCircuits[foundCircuit].junctionBoxes[jb] = true
+			for jb := range circuit {
+				newCircuits[foundCircuit][jb] = true
 			}
 		} else {
 			newCircuits = append(newCircuits, circuit)
@@ -103,7 +92,7 @@ func combineCircuits(circuits []circuit) []circuit {
 	}
 	if len(newCircuits) == len(circuits) {
 		sort.Slice(newCircuits, func(i, j int) bool {
-			return len(newCircuits[i].junctionBoxes) > len(newCircuits[j].junctionBoxes)
+			return len(newCircuits[i]) > len(newCircuits[j])
 		})
 		return newCircuits
 	} else {
@@ -111,7 +100,7 @@ func combineCircuits(circuits []circuit) []circuit {
 	}
 }
 
-func combineCircuits2(pairs []pairWithDistance, totalJbs int) (jb, jb) {
+func combineCircuits2(pairs []pair, totalJbs int) (jb, jb) {
 	newCircuits := map[jb]map[jb]bool{pairs[0].a: {pairs[0].a: true, pairs[0].b: true}}
 	for _, pair := range pairs[1:] {
 		// find if a is in a circuit
