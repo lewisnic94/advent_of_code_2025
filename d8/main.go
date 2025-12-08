@@ -51,59 +51,12 @@ func main() {
 	sort.Slice(pairs, func(i, j int) bool {
 		return pairs[i].Distance() < pairs[j].Distance()
 	})
-	part1Circuits := []map[jb]bool{}
 	N := 1000
-	for _, pwd := range pairs[:N] {
-		part1Circuits = append(part1Circuits, map[jb]bool{pwd.a: true, pwd.b: true})
-	}
-	combinedCircuits := combineCircuits(part1Circuits)
-	c1len := len(combinedCircuits[0])
-	c2len := len(combinedCircuits[1])
-	c3len := len(combinedCircuits[2])
 
-	a, b := combineCircuits2(pairs, len(junctionBoxes))
-	fmt.Println("part 1:", c1len*c2len*c3len)
-	fmt.Println("part 2:", a, b, a.c.x*b.c.x)
-
-}
-
-func combineCircuits(circuits []map[jb]bool) []map[jb]bool {
-	newCircuits := []map[jb]bool{circuits[0]}
-	for _, circuit := range circuits[1:] {
-		overlap := false
-		foundCircuit := 0
-		for j, newCircuit := range newCircuits {
-			for jb := range circuit {
-				if _, ok := newCircuit[jb]; ok {
-					overlap = true
-					foundCircuit = j
-					break
-				}
-			}
-
-		}
-		if overlap {
-			for jb := range circuit {
-				newCircuits[foundCircuit][jb] = true
-			}
-		} else {
-			newCircuits = append(newCircuits, circuit)
-		}
-	}
-	if len(newCircuits) == len(circuits) {
-		sort.Slice(newCircuits, func(i, j int) bool {
-			return len(newCircuits[i]) > len(newCircuits[j])
-		})
-		return newCircuits
-	} else {
-		return combineCircuits(newCircuits)
-	}
-}
-
-func combineCircuits2(pairs []pair, totalJbs int) (jb, jb) {
 	newCircuits := map[jb]map[jb]bool{pairs[0].a: {pairs[0].a: true, pairs[0].b: true}}
-	for _, pair := range pairs[1:] {
-		// find if a is in a circuit
+	totalJbs := len(junctionBoxes)
+	for j, pair := range pairs[1:] {
+		// find if a or b is in a circuit
 		var cAKey, cBKey *jb
 		for j, newCircuit := range newCircuits {
 			if _, ok := newCircuit[pair.a]; ok {
@@ -113,37 +66,38 @@ func combineCircuits2(pairs []pair, totalJbs int) (jb, jb) {
 				cBKey = &j
 			}
 		}
-		if cAKey != nil || cBKey != nil {
-			if cAKey != nil && cBKey != nil && cAKey != cBKey {
-				// merge circuits
-				for jb := range newCircuits[*cBKey] {
-					newCircuits[*cAKey][jb] = true
-				}
-				delete(newCircuits, *cBKey)
-				l := len(newCircuits[*cAKey])
-				if l == totalJbs {
-					return pair.a, pair.b
-				}
-			} else if cAKey != nil {
-				newCircuits[*cAKey][pair.b] = true
-				l := len(newCircuits[*cAKey])
-				if l == totalJbs {
-					return pair.a, pair.b
-				}
-			} else if cBKey != nil {
-				newCircuits[*cBKey][pair.a] = true
-				l := len(newCircuits[*cBKey])
-				if l == totalJbs {
-					return pair.a, pair.b
-				}
+		var l int = 2
+		if cAKey != nil && cBKey != nil && cAKey != cBKey {
+			// merge circuits
+			for jb := range newCircuits[*cBKey] {
+				newCircuits[*cAKey][jb] = true
 			}
-
+			delete(newCircuits, *cBKey)
+			l = len(newCircuits[*cAKey])
+		} else if cAKey != nil {
+			newCircuits[*cAKey][pair.b] = true
+			l = len(newCircuits[*cAKey])
+		} else if cBKey != nil {
+			newCircuits[*cBKey][pair.a] = true
+			l = len(newCircuits[*cBKey])
 		} else {
 			newCircuits[pair.a] = map[jb]bool{pair.a: true, pair.b: true}
 		}
-
+		if l == totalJbs {
+			fmt.Println("part 2:", pair.a.c.x*pair.b.c.x)
+			return
+		} else if j == N-1 {
+			// get the 3 largest circuits
+			circuits := []map[jb]bool{}
+			for _, c := range newCircuits {
+				circuits = append(circuits, c)
+			}
+			sort.Slice(circuits, func(i, j int) bool {
+				return len(circuits[i]) > len(circuits[j])
+			})
+			fmt.Println("part 1:", len(circuits[0])*len(circuits[1])*len(circuits[2]))
+		}
 	}
-	return jb{}, jb{}
 }
 
 func parseInt(s string) int {
